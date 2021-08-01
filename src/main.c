@@ -1,18 +1,17 @@
 #include "raylib.h"
-#include "limits.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "math.h"
 #include "time.h"
 
-#define ROOM_COUNT 6
+#include "mst.h"
+#include "const.h"
+
 const int screenWidth = 800;
 const int screenHeight = 800;
 const int seed = 123456781;
 
 const int radius = 20;
-const int maxSize = 100;
-const int minSize = 35;
 
 typedef struct R {
 	int x;
@@ -27,7 +26,7 @@ typedef struct R {
 Room rooms[ROOM_COUNT];
 
 // define each corridor as a branch between a room and its "parent"
-int parentRooms[ROOM_COUNT];
+int *parentRooms;
 
 // extend build in C random function to return a value from 0.0d to 1.0d
 double randomDouble() {
@@ -49,8 +48,8 @@ void positionRooms() {
 
 		int x = (screenWidth/2) + radius*r*cos(t);
 		int y = (screenHeight/2) + radius*r*sin(t);
-		int w = minSize + randomDouble() * (maxSize-minSize);
-		int h = minSize + randomDouble() * (maxSize-minSize);
+		int w = MIN_SIZE + randomDouble() * (MAX_SIZE-MIN_SIZE);
+		int h = MIN_SIZE + randomDouble() * (MAX_SIZE-MIN_SIZE);
 
 		rooms[i] = (Room){x, y, w, h};
 	}
@@ -118,50 +117,6 @@ Vector2 getCenter(Room *room) {
 	return (Vector2){room->x+(room->w/2), room->y+(room->h/2)};
 }
 
-// Prim's minimum spanning tree algorithm
-void primMST(int graph[ROOM_COUNT][ROOM_COUNT]) {
-
-	int key[ROOM_COUNT];
-	bool mstSet[ROOM_COUNT];
-
-	// all keys should start as infinite
-	for (int i = 0; i < ROOM_COUNT; i++) {
-		key[i] = INT_MAX;
-		mstSet[i] = false;
-	}
-
-	// always start with the first vertext int MST
-	// making the key 0, so that its always picked first
-	key[0] = 0;
-	parentRooms[0] = -1; // the first node has no parent
-
-	for (int c = 0; c < ROOM_COUNT - 1; c++) {
-
-		// pick the minimum key from the set of nodes that are not yet included
-		int min = INT_MAX;
-		int min_index;
-
-		for (int v = 0; v < ROOM_COUNT; v++) {
-			if (mstSet[v] == false && key[v] < min) {
-				min = key[v];
-				min_index = v;
-			}
-		}
-		printf("min index is %d\n", min_index);	
-		// add the picked node to the set
-		mstSet[min_index] = true;
-
-		// Update key values and parent index
-
-		for (int v = 0; v < ROOM_COUNT; v++) {
-			if (graph[min_index][v] && mstSet[v] == false && graph[min_index][v] < key[v]) {
-				parentRooms[v] = min_index;
-				key[v] = graph[min_index][v];
-			}
-		}
-	}
-
-}
 
 void mapCorridors() {
 	// Make things easier for us by working with only the center points of each room
@@ -177,14 +132,15 @@ void mapCorridors() {
 	for (int i = 0; i < ROOM_COUNT; i++) {
 		for (int j = 0; j < ROOM_COUNT; j++) {
 			// we only really need to compare distances between nodes, so to save time, we will leave distances squared
-			int distanceSquared = floor((nodes[i].x - nodes[j].x) + (nodes[i].y - nodes[j].y));
+			int dx = (nodes[i].x - nodes[j].x);
+			int dy = (nodes[i].y - nodes[j].y);
+			int distanceSquared = dx*dx + dy*dy;
 			graph[i][j] = distanceSquared;
 		}
 	}
 
 
-	primMST(graph);
-
+	parentRooms = primMST(graph);
 }
 
 
