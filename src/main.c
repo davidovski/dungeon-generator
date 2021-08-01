@@ -9,7 +9,6 @@
 
 const int screenWidth = 800;
 const int screenHeight = 800;
-const int seed = 123456781;
 
 const int radius = 20;
 
@@ -27,6 +26,15 @@ Room rooms[ROOM_COUNT];
 
 // define each corridor as a branch between a room and its "parent"
 int *parentRooms;
+
+// then afterwards we can define corridors as individual lines
+typedef struct {
+	int ax, ay, bx, by;
+} Corridor;
+
+// Since one connecting branch is at most two perpendicular corridors
+// we can 
+Corridor corridors[ROOM_COUNT*2];
 
 // extend build in C random function to return a value from 0.0d to 1.0d
 double randomDouble() {
@@ -145,19 +153,126 @@ void mapCorridors() {
 
 
 void createCorridors() {
+	// for each branch between parent and child, calculate the best corridor arrangement
+	for (int i = 0; i < ROOM_COUNT; i++) {
+		if (parentRooms[i] > -1) {
+			Room child = rooms[i];
+			Room parent = rooms[parentRooms[i]];
+			
+			
 
+			if ((child.x > parent.x && child.x < parent.x+parent.w)
+			   || (parent.x > child.x && parent.x < child.x+child.w)) {
+				// case 1: the two can have a single vertical corridor
+				int cx, ay, by;
+
+				if (child.x > parent.x) cx = (child.x + parent.x+parent.w) / 2;
+				else 			cx = (parent.x + child.x+child.w) / 2;
+
+				if (child.y > parent.y+parent.h) {
+					ay = child.y;
+					by = parent.y+parent.h;
+				} else if (parent.y > child.y+child.h) {
+					ay = parent.y;
+					by = child.y+child.h;
+				}
+				corridors[i*2] = (Corridor){cx, ay, cx, by};
+			} else if ((child.y > parent.y && child.y < parent.y+parent.h)
+			   || (parent.y > child.y && parent.y < child.y+child.h)) {
+				// case 2: the two can have a single horizontal corridor
+				int cy, ax, bx;
+
+				if (child.y > parent.y) cy = (child.y + parent.y+parent.h) / 2;
+				else 			cy = (parent.y + child.y+child.h) / 2;
+
+				if (child.x > parent.x+parent.w) {
+					ax = child.x;
+					bx = parent.x+parent.w;
+				} else if (parent.x > child.x+child.w) {
+					ax = parent.x;
+					bx = child.x+child.w;
+				}
+
+				corridors[i*2] = (Corridor){ax, cy, bx, cy};
+			} else {
+				// case 3: the two need to have an L or Г shaped double corridor
+
+				Vector2 a = getCenter(&child);
+				Vector2 b = getCenter(&parent);
+				// point on child
+				int ax, ay;
+				// point on parent
+				int bx, by;
+				// common point
+				int cx, cy;
+				
+				if (randomDouble() > 0.5) {
+					cx = a.x;
+					cy = b.y;
+				} else {
+					cx = b.x;
+					cy = a.y;
+				}
+			
+				if (cx == a.x) {
+					ax = cx;
+					if (abs(child.y - cy) < abs(child.y+child.h - cy)) {
+						ay = child.y;
+					} else {
+						ay = child.y+child.h;
+					}
+
+				}
+				if (cx == b.x) {
+					bx = cx;
+					if (abs(parent.y - cy) < abs(parent.y+parent.h - cy)) {
+						by = parent.y;
+					} else {
+						by = parent.y+parent.h;
+					}
+
+				}
+				if (cy == a.y) {
+					ay = cy;
+					if (abs(child.x - cx) < abs(child.x+child.w - cx)) {
+						ax = child.x;
+					} else {
+						ax = child.x+child.w;
+					}
+
+				}
+				if (cy == b.y) {
+					by = cy;
+					if (abs(parent.x - cx) < abs(parent.x+parent.w - cx)) {
+						bx = parent.x;
+					} else {
+						bx = parent.x+parent.w;
+					}
+
+				}
+
+				corridors[i*2] = (Corridor){ax, ay, cx, cy};
+				corridors[i*2+1] = (Corridor){bx, by, cx, cy};
+				
+
+			}
+
+		}
+	}
 }
 
 void generateRooms() {
 	positionRooms();
 	separateRooms();
 	mapCorridors();
+	createCorridors();
 	
 }
 
 
 int main(void) {
-	srand(time(NULL));
+	if (SEED > 0) 	srand(SEED);
+	else		srand(time(NULL));
 
 	generateRooms();
 
@@ -170,15 +285,6 @@ int main(void) {
 		ClearBackground(GRAY);
 
 		for (int i = 0; i < ROOM_COUNT; i++) {
-			for (int j = 0; j < ROOM_COUNT; j++) {
-				Vector2 a = getCenter(&rooms[i]);
-				Vector2 b = getCenter(&rooms[j]);
-
-				DrawLine(a.x, a.y, b.x, b.y, RED);
-			}
-		}
-
-		for (int i = 0; i < ROOM_COUNT; i++) {
 			Color c;
 			if (i == 0) c = BLACK;
 			else	    c = LIGHTGRAY;
@@ -189,11 +295,13 @@ int main(void) {
 			if (p > -1 && p < ROOM_COUNT) {
 				Vector2 a = getCenter(&rooms[i]);
 				Vector2 b = getCenter(&rooms[p]);
-
-				DrawLine(a.x, a.y, b.x, b.y, GREEN);
 			}
 		}
 
+		for (int i = 0; i < ROOM_COUNT*2; i++) {
+			Corridor c = corridors[i];
+			DrawLine(c.ax, c.ay, c.bx, c.by, LIGHTGRAY);
+		}
 	
 
 		EndDrawing();
