@@ -11,7 +11,7 @@ build: src/main.c
 	${CC} src/main.c src/mst.c -o ${PROG} ${FLAGS}
 
 build-osx: ${PROG}
-	clang -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL libraylib.a ${PROG}.c -o ${PROG}
+	clang -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL libraylib.a src/main.c src/mst.c -o ${PROG}
 
 clean: ${PROG}
 	rm ${PROG}
