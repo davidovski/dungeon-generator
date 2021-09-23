@@ -6,3 +6,8 @@ A simple dungeon crawler map layout generator written in C using raylib for grap
 - [Procedural Dungeon Generation Algorithm](https://www.gamasutra.com/blogs/AAdonaac/20150903/252889/Procedural_Dungeon_Generation_Algorithm.php)
 - [Prim’s Minimum Spanning Tree](https://www.geeksforgeeks.org/prims-minimum-spanning-tree-mst-greedy-algo-5/)
 
+## Images
+
+![dungeon](/images/dungeon1.png)
+![dungeon](/images/dungeon2.png)
+
